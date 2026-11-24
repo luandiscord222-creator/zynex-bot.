@@ -1,0 +1,13 @@
+
+{
+  "name": "zynex-bot",
+  "version": "1.0.0",
+  "description": "ZYNEX BOT - EB DO PRO",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.19.3"
+  }
+}
