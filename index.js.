@@ -1,0 +1,150 @@
+
+const {
+  Client,
+  GatewayIntentBits,
+  REST,
+  Routes,
+  SlashCommandBuilder,
+  EmbedBuilder,
+  PermissionFlagsBits
+} = require('discord.js');
+
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds]
+});
+
+const comandos = [
+  new SlashCommandBuilder()
+    .setName('zb')
+    .setDescription('Central do ZYNEX BOT')
+    .addSubcommand(s => s.setName('ajuda').setDescription('Ver comandos'))
+    .addSubcommand(s => s.setName('ping').setDescription('Testar o bot'))
+    .addSubcommand(s => s.setName('info').setDescription('Informações do bot')),
+
+  new SlashCommandBuilder()
+    .setName('embed')
+    .setDescription('Criar embed personalizado')
+    .addStringOption(o => o.setName('titulo').setDescription('Título').setRequired(true))
+    .addStringOption(o => o.setName('mensagem').setDescription('Descrição').setRequired(true))
+    .addStringOption(o => o.setName('cor').setDescription('Cor hexadecimal, ex: #003399')),
+
+  new SlashCommandBuilder()
+    .setName('anuncio')
+    .setDescription('Enviar anúncio oficial')
+    .addStringOption(o => o.setName('mensagem').setDescription('Texto do anúncio').setRequired(true)),
+
+  new SlashCommandBuilder()
+    .setName('sorteio')
+    .setDescription('Criar sorteio')
+    .addStringOption(o => o.setName('premio').setDescription('Prêmio').setRequired(true))
+    .addIntegerOption(o => o.setName('vencedores').setDescription('Número de vencedores').setMinValue(1).setMaxValue(20).setRequired(true)),
+
+  new SlashCommandBuilder()
+    .setName('limpar')
+    .setDescription('Limpar mensagens')
+    .addIntegerOption(o => o.setName('quantidade').setDescription('Quantidade de mensagens').setMinValue(1).setMaxValue(100).setRequired(true))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
+];
+
+client.once('ready', () => {
+  console.log(`⚡ ${client.user.tag} está online!`);
+});
+
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  const { commandName } = interaction;
+
+  try {
+    if (commandName === 'zb') {
+      const sub = interaction.options.getSubcommand();
+
+      if (sub === 'ping') {
+        return interaction.reply(`🏓 Pong! ${client.ws.ping}ms`);
+      }
+
+      if (sub === 'info') {
+        return interaction.reply(`⚡ Sou o ${client.user.tag}, o ZYNEX BOT!`);
+      }
+
+      if (sub === 'ajuda') {
+        const embed = new EmbedBuilder()
+          .setColor('#003399')
+          .setTitle('⚡ Central ZYNEX BOT')
+          .setDescription('**Comandos disponíveis:**\n/zb ping\n/zb info\n/zb ajuda\n/embed\n/anuncio\n/sorteio\n/limpar')
+          .setFooter({ text: 'EB DO PRO • ZYNEX BOT' });
+
+        return interaction.reply({ embeds: [embed] });
+      }
+    }
+
+    if (commandName === 'embed') {
+      const embed = new EmbedBuilder()
+        .setColor(interaction.options.getString('cor') || '#003399')
+        .setTitle(interaction.options.getString('titulo'))
+        .setDescription(interaction.options.getString('mensagem'))
+        .setFooter({ text: 'EB DO PRO • ZYNEX BOT' });
+
+      return interaction.reply({ embeds: [embed] });
+    }
+
+    if (commandName === 'anuncio') {
+      const embed = new EmbedBuilder()
+        .setColor('#003399')
+        .setTitle('📢 Comunicado Oficial')
+        .setDescription(interaction.options.getString('mensagem'))
+        .setFooter({ text: 'EB DO PRO • ZYNEX BOT' });
+
+      return interaction.reply({ embeds: [embed] });
+    }
+
+    if (commandName === 'sorteio') {
+      const premio = interaction.options.getString('premio');
+      const vencedores = interaction.options.getInteger('vencedores');
+
+      const embed = new EmbedBuilder()
+        .setColor('#FFD700')
+        .setTitle('🎉 SORTEIO ZYNEX')
+        .setDescription(`Prêmio: **${premio}**\nVencedores: **${vencedores}**\n\nParticipação será aberta em breve!`)
+        .setFooter({ text: 'EB DO PRO • ZYNEX BOT' });
+
+      return interaction.reply({ embeds: [embed] });
+    }
+
+    if (commandName === 'limpar') {
+      if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageMessages)) {
+        return interaction.reply({ content: 'Você não tem permissão.', ephemeral: true });
+      }
+
+      const quantidade = interaction.options.getInteger('quantidade');
+      await interaction.deferReply({ ephemeral: true });
+      const apagadas = await interaction.channel.bulkDelete(quantidade, true);
+      return interaction.editReply(`🧹 ${apagadas.size} mensagens apagadas.`);
+    }
+  } catch (error) {
+    console.error(error);
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply('Ocorreu um erro ao executar o comando.');
+    } else {
+      await interaction.reply({ content: 'Ocorreu um erro.', ephemeral: true });
+    }
+  }
+});
+
+const token = process.env.DISCORD_TOKEN;
+const clientId = process.env.CLIENT_ID;
+const guildId = process.env.GUILD_ID;
+
+if (!token || !clientId || !guildId) {
+  throw new Error('Configure DISCORD_TOKEN, CLIENT_ID e GUILD_ID nas variáveis de ambiente.');
+}
+
+const rest = new REST({ version: '10' }).setToken(token);
+
+(async () => {
+  await rest.put(
+    Routes.applicationGuildCommands(clientId, guildId),
+    { body: comandos.map(c => c.toJSON()) }
+  );
+  await client.login(token);
+})();
