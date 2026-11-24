@@ -1,5 +1,4 @@
- 
-name: Ligar ZYNEX BOT
+ name: Ligar ZYNEX BOT
 
 on:
   workflow_dispatch:
@@ -21,7 +20,8 @@ jobs:
         run: npm install
 
       - name: Iniciar ZYNEX BOT
-        run: npm start
+        run: node ./index.js
+        working-directory: .
         env:
           DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
